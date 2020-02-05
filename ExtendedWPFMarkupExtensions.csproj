@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.WindowsDesktop">
+  <PropertyGroup>
+    <TargetFrameworks>netcoreapp3.0;net471</TargetFrameworks>
+    <PackageId>ExtendedWPFMarkupExtensions</PackageId>
+    <Title>Extended WPF extensions to be used in XAML code</Title>
+    <PackageDescription>A compilation of extensions to be integrated directly in XAML.</PackageDescription>
+    <PackageTags>EMA;WPF;Custom bindings;MarkupExtensions</PackageTags>
+    <UseWPF>true</UseWPF>
+    <Version>0.1</Version>
+    <Authors>David Le Bourdais</Authors>
+	<Copyright>Copyright © 2020</Copyright>
+	<GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>IDE1006</NoWarn>
+  </PropertyGroup>
+</Project>
