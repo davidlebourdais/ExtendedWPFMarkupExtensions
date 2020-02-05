@@ -12,4 +12,8 @@
 	<GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>IDE1006</NoWarn>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="ExtendedWPFVisualTreeHelper" Version="1.0.5" />
+  </ItemGroup>
 </Project>
