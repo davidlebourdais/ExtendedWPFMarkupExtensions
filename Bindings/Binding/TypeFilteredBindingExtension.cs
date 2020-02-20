@@ -27,7 +27,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         protected override bool IsExtensionPersistent { get; } = true;
 
         /// <summary>
-        /// Initiates a new instance of <see cref="ICollectionChangedBindingExtension"/>.
+        /// Initiates a new instance of <see cref="TypeFilteredBindingExtension"/>.
         /// </summary>
         public TypeFilteredBindingExtension()
         { }
