@@ -8,12 +8,14 @@ namespace EMA.ExtendedWPFMarkupExtensions
 {
     /// <summary>
     /// Markup extension for binding that would only work when 
-    /// its source type matched a passed filtered type. 
+    /// its source type matched a passed type filter. 
     /// </summary>
     /// <remarks>This type of binding can be used to avoid 'property not found errors' when toggling types over a content control.</remarks>
     [MarkupExtensionReturnType(typeof(Binding))]
     public class TypeFilteredBindingExtension : SingleBindingExtension
     {
+        private bool initialized;   // indicates if an instance of this class has been initialized.
+
         /// <summary>
         /// Gets or sets the type of the binding source which will
         /// validate the binding.
@@ -30,7 +32,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// Initiates a new instance of <see cref="TypeFilteredBindingExtension"/>.
         /// </summary>
         public TypeFilteredBindingExtension()
-        { }
+        {   }
 
         /// <summary>
         /// Initiates a new instance of <see cref="TypeFilteredBindingExtension"/>.
@@ -48,56 +50,73 @@ namespace EMA.ExtendedWPFMarkupExtensions
         {
             var result = base.ProvideValue(serviceProvider);
 
-            // Get binding that was generated:
-            if (GeneratedBindingExpression != null && GeneratedBindingExpression.IsAlive)
-            {
-                var expression = GeneratedBindingExpression.Target as BindingExpression;
-                toggleBinding(getBindingSource(expression.ParentBinding, serviceProvider));
-
-                // Check if binding was not resolved, in which case postpone processing when target element is loaded:
-                if (UnresolvedSource.Item1 != null)
-                    UnresolvedSource.Item2.Loaded += UnresolvedSource_Loaded;
-
-                // Check if source is a datacontext, in which case subscribe to datacontext changed event:
-                if (DatacontextTarget.Item1 != null)
-                    DatacontextTarget.Item2.DataContextChanged += DatacontextTarget_DataContextChanged;
-            }
+            initialize(getBindingSource(GeneratedBinding, serviceProvider));
 
             return result;
         }
 
         /// <summary>
-        /// Occurs when the target object is loaded and thus visual tree is contructed. 
-        /// Try to find binding source if not resolved at construction.
+        /// Called when the target object is initialized.
         /// </summary>
-        /// <param name="sender">The framework element that was loaded.</param>
-        /// <param name="e">Information about the event.</param>
-        private void UnresolvedSource_Loaded(object sender, RoutedEventArgs e)
+        /// <param name="target">The binding target object.</param>
+        protected override void OnTargetInitialized(FrameworkElement target)
         {
-            if (sender is FrameworkElement casted)
+            if (target == null) return;
+
+            // Retry class initialization at framework element init:
+            if (!initialized)
+                initialize(getBindingSource(GeneratedBinding, TargetObject));
+        }
+
+        /// <summary>
+        /// Called when the target object is loaded.
+        /// </summary>
+        /// <param name="target">The binding target object.</param>
+        protected override void OnTargetLoaded(FrameworkElement target)
+        {
+            if (target == null) return;
+
+            // Retry initialization at loaded:
+            if (!initialized && GeneratedBinding != null)
+                initialize(getBindingSource(GeneratedBinding, TargetObject), true);
+        }
+
+        /// <summary>
+        /// Prepares this class to filter data based on resolved (or unresolved source).
+        /// </summary>
+        /// <param name="source">The source object to assess.</param>
+        /// <param name="loading">Indicates if the functin is called in the loading context of the target.</param>
+        private void initialize(object source, bool loading = false)
+        {
+            if (initialized) return;
+
+            // If source is resolved then set binding up:
+            if (source != null)
             {
-                casted.Loaded -= UnresolvedSource_Loaded;  // unsubscribe.
+                toggleBinding(source);
+                initialized = true;
 
-                // Applies only if extension is still alive:
-                if (IsExtensionValid)
-                {
-                    var expression = GeneratedBindingExpression.Target as BindingExpression;
-                    var binding = expression.ParentBinding;
-
-                    if (binding != null && UnresolvedSource.Item2 == casted)  // should be unresolved.
-                    {
-                        // Get source (should be ok now that visual tree is constructed):
-                        toggleBinding(getBindingSource(expression.ParentBinding, casted));
-                    }
-
-                    // Check if source is a datacontext, in which case subscribe to datacontext changed event:
-                    if (DatacontextTarget.Item1 != null)
-                        DatacontextTarget.Item2.DataContextChanged += DatacontextTarget_DataContextChanged;
-
-                    // Unset unresolved as now processed:
-                    UnresolvedSource = (null, null);
-                }
+                // Check if source is a datacontext, in which case subscribe to datacontext changed event:
+                if (DatacontextTarget.Item1 != null)
+                    DatacontextTarget.Item2.DataContextChanged += DatacontextTarget_DataContextChanged;
             }
+            else // else clear current binding since we cannot know if source type is correct:
+            {
+                // Clear current binding while source isn't resolved, since it could be of another
+                // type as the accepted one:
+                if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) != null)
+                    BindingOperations.ClearBinding(TargetObject, TargetProperty);
+            }
+        }
+
+        /// <summary>
+        /// Called when the target object is unloaded.
+        /// </summary>
+        /// <param name="target">The binding target object.</param>
+        protected override void OnTargetUnloaded(FrameworkElement target)
+        {
+            // Free up event handlers:
+            target.DataContextChanged -= DatacontextTarget_DataContextChanged;
         }
 
         /// <summary>
@@ -107,22 +126,10 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// <param name="e">Information about the datacontext changed event.</param>
         private void DatacontextTarget_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
-            if (sender is FrameworkElement casted)
-            {
-                // Only if extension is still alive:
-                if (IsExtensionValid)
-                {
-                    var expression = GeneratedBindingExpression.Target as BindingExpression;
-                    var binding = expression.ParentBinding;
-
-                    if (binding != null)
-                        toggleBinding(getBindingSource(expression.ParentBinding, casted));
-                }
-                else
-                {
-                    casted.DataContextChanged -= DatacontextTarget_DataContextChanged;
-                }
-            }
+            if (TargetObject == sender && TargetProperty != null)
+                toggleBinding(getBindingSource(GeneratedBinding, TargetObject));
+            else if (sender is FrameworkElement casted)
+                casted.DataContextChanged -= DatacontextTarget_DataContextChanged;
         }
 
         /// <summary>
@@ -131,19 +138,18 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// <param name="sourceElement">The binding source element that must be assessed.</param>
         private void toggleBinding(object sourceElement)
         {
-            if (GeneratedBindingExpression.IsAlive)
+            if (sourceElement != null && TargetObject != null && TargetProperty != null)
             {
-                var expression = GeneratedBindingExpression.Target as BindingExpression;
-                var binding = expression?.ParentBinding;
-                if (binding != null)
+                // If has binding while should not have, clear binding:
+                if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) != null
+                    && sourceElement?.GetType() != FilteringType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(FilteringType))
                 {
-                    // If has binding while should not have, clear binding:
-                    if (BindingOperations.GetBindingBase(expression.Target, expression.TargetProperty) != null
-                        && sourceElement?.GetType() != FilteringType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(FilteringType))
-                        BindingOperations.ClearBinding(expression.Target, expression.TargetProperty);
-                    // If has no binding while should have, set binding:
-                    else if (BindingOperations.GetBindingBase(expression.Target, expression.TargetProperty) == null)
-                        BindingOperations.SetBinding(expression.Target, expression.TargetProperty, binding);
+                    BindingOperations.ClearBinding(TargetObject, TargetProperty);
+                }
+                // If has no binding while should have, set binding:
+                else if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) == null && (sourceElement?.GetType() == FilteringType || sourceElement.GetType().GetTypeInfo().IsSubclassOf(FilteringType)))
+                {
+                    BindingOperations.SetBinding(TargetObject, TargetProperty, GeneratedBinding);
                 }
             }
         }

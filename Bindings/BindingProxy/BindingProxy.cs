@@ -5,7 +5,8 @@ namespace EMA.ExtendedWPFMarkupExtensions
     /// <summary>
     /// A class used to bind DynamicResources on objects that normaly do not allow them.
     /// </summary>
-    /// <remarks>Adapted from: https://www.thomaslevesque.com/2011/03/21/wpf-how-to-bind-to-data-when-the-datacontext-is-not-inherited/
+    /// <remarks>
+    /// Adapted from: https://www.thomaslevesque.com/2011/03/21/wpf-how-to-bind-to-data-when-the-datacontext-is-not-inherited/
     /// </remarks>
     public class BindingProxy : Freezable
     {

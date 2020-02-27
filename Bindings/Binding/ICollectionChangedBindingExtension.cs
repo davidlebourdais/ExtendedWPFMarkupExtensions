@@ -21,7 +21,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// be alerted on. Multiple actions are possible (ex: Add|Remove). Default is set to all possible actions.
         /// </summary>
         public NotifyCollectionChangedAction ActionsToNotify { get; set; } =
-            NotifyCollectionChangedAction.Add
+              NotifyCollectionChangedAction.Add
             | NotifyCollectionChangedAction.Remove
             | NotifyCollectionChangedAction.Replace
             | NotifyCollectionChangedAction.Reset
@@ -32,13 +32,13 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// after <see cref="ProvideValue(IServiceProvider)"/> is invoked.
         /// </summary>
         /// <remarks>To be overriden by derivating type.</remarks>
-        protected override bool IsExtensionPersistent { get; } = true;  // true here, we want to stay alive to keep listening to weak collection changed events.
+        protected override bool IsExtensionPersistent { get; } = true;  // true here, we want to stay alive to keep listening to weak collection changed events while control is alive.
 
         /// <summary>
         /// Initiates a new instance of <see cref="ICollectionChangedBindingExtension"/>.
         /// </summary>
         public ICollectionChangedBindingExtension() : base()
-        { }
+        {   }
 
         /// <summary>
         /// Initiates a new instance of <see cref="ICollectionChangedBindingExtension"/>.
@@ -56,15 +56,14 @@ namespace EMA.ExtendedWPFMarkupExtensions
         {
             var result = base.ProvideValue(serviceProvider);
 
-            // Get binding that was generated:
-            if (GeneratedBindingExpression != null && GeneratedBindingExpression.IsAlive)
+            if (TargetObject != null && TargetProperty != null && result is BindingExpression bindingexpression)
             {
-                var expression = GeneratedBindingExpression.Target as BindingExpression;
-                if (getBindingSourcePropertyValue(expression.ParentBinding, serviceProvider) is INotifyCollectionChanged collection)
+                var binding = bindingexpression.ParentBinding;
+                if (getBindingSourcePropertyValue(binding, serviceProvider) is INotifyCollectionChanged collection)
                     CollectionChangedEventManager.AddListener(collection, this);  // add this as listener to update collection when it changes
 
                 // Check if binding was not resolved, in which case postpone processing when target element is loaded:
-                if (UnresolvedSource.Item1 != null)
+                if (UnresolvedSource.Item1 != null && !UnresolvedSource.Item2.IsLoaded)
                     UnresolvedSource.Item2.Loaded += UnresolvedSource_Loaded;
 
                 // Check if source is a datacontext, in which case subscribe to datacontext changed event:
@@ -76,7 +75,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         }
 
         /// <summary>
-        /// Occurs when the target object is loaded and thus visual tree is contructed. 
+        /// Occurs when the target object is loaded and thus visual tree is constructed. 
         /// Try to find binding source if not resolved at construction.
         /// </summary>
         /// <param name="sender">The framework element that was loaded.</param>
@@ -87,12 +86,9 @@ namespace EMA.ExtendedWPFMarkupExtensions
             {
                 casted.Loaded -= UnresolvedSource_Loaded;  // unsubscribe.
 
-                // Applies only if extension is still alive:
-                if (IsExtensionValid)
+                if (TargetObject != null && TargetProperty != null)
                 {
-                    var expression = GeneratedBindingExpression.Target as BindingExpression;
-                    var binding = expression.ParentBinding;
-
+                    var binding = BindingOperations.GetBinding(TargetObject, TargetProperty);
                     if (binding != null && UnresolvedSource.Item2 == casted)  // should be unresolved.
                     {
                         // Get source (should be ok now that visual tree is constructed):
@@ -111,6 +107,16 @@ namespace EMA.ExtendedWPFMarkupExtensions
         }
 
         /// <summary>
+        /// Called when the target object is unloaded.
+        /// </summary>
+        /// <param name="target">The binding target object.</param>
+        protected override void OnTargetUnloaded(FrameworkElement target)
+        {
+            // Free up event handlers:
+            target.DataContextChanged -= DatacontextTarget_DataContextChanged;
+        }
+
+        /// <summary>
         /// Called whenever the datacontext of one of the inner source binding changed.
         /// </summary>
         /// <param name="sender">A framework element for which the property changed.</param>
@@ -119,12 +125,9 @@ namespace EMA.ExtendedWPFMarkupExtensions
         {
             if (sender is FrameworkElement casted)
             {
-                // Only if extension is still alive:
-                if (IsExtensionValid)
+                if (TargetObject != null && TargetProperty != null)
                 {
-                    var expression = GeneratedBindingExpression.Target as BindingExpression;
-                    var binding = expression.ParentBinding;
-
+                    var binding = BindingOperations.GetBinding(TargetObject, TargetProperty);
                     if (binding != null)
                         if (BindingHelper.GetBindingSourcePropertyValue(casted.DataContext, binding.Path) is INotifyCollectionChanged collection)
                             CollectionChangedEventManager.AddListener(collection, this);
@@ -146,7 +149,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// <remarks><see cref="IWeakEventListener"/> implementation.</remarks>
         public bool ReceiveWeakEvent(Type managerType, object sender, EventArgs e)
         {
-            if (IsExtensionValid)
+            if (TargetObject != null && TargetProperty != null)
             {
                 if (managerType == typeof(CollectionChangedEventManager))
                 {
@@ -154,8 +157,13 @@ namespace EMA.ExtendedWPFMarkupExtensions
                     if (e is NotifyCollectionChangedEventArgs collectionargs && ActionsToNotify.HasFlag(collectionargs.Action))
                     {
                         // Update binding target when collection changed:
-                        (GeneratedBindingExpression.Target as BindingExpression).UpdateTarget();
-                        return true;
+                        var expression = BindingOperations.GetBindingExpression(TargetObject, TargetProperty);
+                        if (expression != null)
+                        {
+                            expression.UpdateTarget();
+                            return true;
+                        }
+                        else return false;
                     }
                     else return false;
                 }
