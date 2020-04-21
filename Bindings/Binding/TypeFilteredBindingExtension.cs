@@ -50,7 +50,8 @@ namespace EMA.ExtendedWPFMarkupExtensions
         {
             var result = base.ProvideValue(serviceProvider);
 
-            initialize(getBindingSource(GeneratedBinding, serviceProvider));
+            if (result is BindingExpression) // process only if a binding was issued.
+                initialize(getBindingSource(GeneratedBinding, serviceProvider));
 
             return result;
         }
@@ -100,7 +101,8 @@ namespace EMA.ExtendedWPFMarkupExtensions
                 if (DatacontextTarget.Item1 != null)
                     DatacontextTarget.Item2.DataContextChanged += DatacontextTarget_DataContextChanged;
             }
-            else // else clear current binding since we cannot know if source type is correct:
+            // else clear current binding since we cannot know if source type is correct:
+            else if (TargetObject != null)  // but only if target object is identified.
             {
                 // Clear current binding while source isn't resolved, since it could be of another
                 // type as the accepted one:
@@ -138,16 +140,18 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// <param name="sourceElement">The binding source element that must be assessed.</param>
         private void toggleBinding(object sourceElement)
         {
-            if (sourceElement != null && TargetObject != null && TargetProperty != null)
+            if (TargetObject != null && TargetProperty != null)
             {
                 // If has binding while should not have, clear binding:
-                if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) != null
-                    && sourceElement?.GetType() != FilteringType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(FilteringType))
+                if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) != null && (sourceElement == null
+                    || sourceElement?.GetType() != FilteringType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(FilteringType)))
                 {
                     BindingOperations.ClearBinding(TargetObject, TargetProperty);
                 }
                 // If has no binding while should have, set binding:
-                else if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) == null && (sourceElement?.GetType() == FilteringType || sourceElement.GetType().GetTypeInfo().IsSubclassOf(FilteringType)))
+                else if (sourceElement != null 
+                        && BindingOperations.GetBindingBase(TargetObject, TargetProperty) == null 
+                        && (sourceElement?.GetType() == FilteringType || sourceElement.GetType().GetTypeInfo().IsSubclassOf(FilteringType)))
                 {
                     BindingOperations.SetBinding(TargetObject, TargetProperty, GeneratedBinding);
                 }
