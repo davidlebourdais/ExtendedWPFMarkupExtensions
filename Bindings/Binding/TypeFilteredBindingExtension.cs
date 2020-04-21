@@ -142,11 +142,11 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// <param name="sourceElement">The binding source element that must be assessed.</param>
         private void toggleBinding(object sourceElement)
         {
-            if (TargetObject != null && TargetProperty != null)
+            if (TargetObject != null && TargetProperty != null && SourceType != null)
             {
                 // If has binding while should not have, clear binding:
                 if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) != null && (sourceElement == null
-                    || sourceElement?.GetType() != SourceType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(SourceType)))
+                    || SourceType == null || sourceElement?.GetType() != SourceType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(SourceType)))
                 {
                     BindingOperations.ClearBinding(TargetObject, TargetProperty);
                 }

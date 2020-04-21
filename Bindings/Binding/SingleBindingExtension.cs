@@ -377,7 +377,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
                     else UnresolvedSource = (binding, targetAsFE);
                 }
             }
-
+            
             return null;
         }
         #endregion
@@ -422,7 +422,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// <summary>
         /// Gets or sets the value to use when the binding is unable to return a value.
         /// </summary>
-        public object FallbackValue { get; set; }
+        public object FallbackValue { get; set; } = DependencyProperty.UnsetValue;
         /// <summary>
         /// Gets or sets a string that specifies how to format the binding if it displays the bound value as a string.
         /// </summary>
@@ -431,7 +431,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// <summary>
         /// Gets or sets the value that is used in the target when the value of the source is null.
         /// </summary>
-        public object TargetNullValue { get; set; }
+        public object TargetNullValue { get; set; } = DependencyProperty.UnsetValue;
         /// <summary>
         ///  Gets or sets the name of the BindingGroup to which this binding belongs.
         /// </summary>
