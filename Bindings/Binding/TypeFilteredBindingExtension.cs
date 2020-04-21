@@ -8,9 +8,10 @@ namespace EMA.ExtendedWPFMarkupExtensions
 {
     /// <summary>
     /// Markup extension for binding that would only work when 
-    /// its source type matched a passed type filter. 
+    /// its source type matches a parameterized source type value. 
     /// </summary>
-    /// <remarks>This type of binding can be used to avoid 'property not found errors' when toggling types over a content control.</remarks>
+    /// <remarks>This type of binding can be used to avoid 'property not found errors' when toggling typest
+    ///  over a content control or when the datacontext naturally changes during a control initialization.</remarks>
     [MarkupExtensionReturnType(typeof(Binding))]
     public class TypeFilteredBindingExtension : SingleBindingExtension
     {
@@ -18,9 +19,10 @@ namespace EMA.ExtendedWPFMarkupExtensions
 
         /// <summary>
         /// Gets or sets the type of the binding source which will
-        /// validate the binding.
+        /// validate the binding. Source must be of this type otherwise
+        /// binding will not be set.
         /// </summary>
-        public Type FilteringType { get; set; }
+        public Type SourceType { get; set; }
 
         /// <summary>
         /// Gets a value indicating if the extension context must persist
@@ -144,14 +146,14 @@ namespace EMA.ExtendedWPFMarkupExtensions
             {
                 // If has binding while should not have, clear binding:
                 if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) != null && (sourceElement == null
-                    || sourceElement?.GetType() != FilteringType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(FilteringType)))
+                    || sourceElement?.GetType() != SourceType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(SourceType)))
                 {
                     BindingOperations.ClearBinding(TargetObject, TargetProperty);
                 }
                 // If has no binding while should have, set binding:
                 else if (sourceElement != null 
                         && BindingOperations.GetBindingBase(TargetObject, TargetProperty) == null 
-                        && (sourceElement?.GetType() == FilteringType || sourceElement.GetType().GetTypeInfo().IsSubclassOf(FilteringType)))
+                        && (sourceElement?.GetType() == SourceType || sourceElement.GetType().GetTypeInfo().IsSubclassOf(SourceType)))
                 {
                     BindingOperations.SetBinding(TargetObject, TargetProperty, GeneratedBinding);
                 }
