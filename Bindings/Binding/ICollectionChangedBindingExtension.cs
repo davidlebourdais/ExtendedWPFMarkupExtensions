@@ -129,7 +129,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
                 {
                     var binding = BindingOperations.GetBinding(TargetObject, TargetProperty);
                     if (binding != null)
-                        if (BindingHelper.GetBindingSourcePropertyValue(casted.DataContext, binding.Path) is INotifyCollectionChanged collection)
+                        if (BindingHelpers.GetBindingSourcePropertyValue(casted.DataContext, binding.Path) is INotifyCollectionChanged collection)
                             CollectionChangedEventManager.AddListener(collection, this);
                 }
                 else

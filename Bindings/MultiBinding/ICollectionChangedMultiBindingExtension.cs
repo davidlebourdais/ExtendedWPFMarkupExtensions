@@ -120,7 +120,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
 
             // -- Case where element name is provided, seek source in xaml: --
             else if (!string.IsNullOrWhiteSpace(binding.ElementName) && serviceProvider != null)
-                return BindingHelper.getSourceFromElementName(binding.ElementName, serviceProvider);
+                return BindingHelpers.getSourceFromElementName(binding.ElementName, serviceProvider);
 
             // -- All other case where we have a target to provide: --
             else if (targetObject != null)
@@ -172,7 +172,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
                 // -- Case where relative source is provided: --
                 if (binding.RelativeSource != null)
                 {
-                    var relative = BindingHelper.getSourceFromRelativeSource(binding.RelativeSource, target);
+                    var relative = BindingHelpers.getSourceFromRelativeSource(binding.RelativeSource, target);
                     if (relative == null && targetAsFE != null && !targetAsFE.IsLoaded)
                         if (!UnresolvedBindings.ContainsKey(binding))
                             UnresolvedBindings.Add(binding, targetAsFE);
@@ -210,7 +210,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
 
             // Process source element to retrieve target property:
             if (sourceElement != null)
-                return BindingHelper.GetBindingSourcePropertyValue(sourceElement, binding.Path);
+                return BindingHelpers.GetBindingSourcePropertyValue(sourceElement, binding.Path);
             else
                 return null;
         }
@@ -227,7 +227,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
 
             // Process source element to retrieve target property:
             if (sourceElement != null)
-                return BindingHelper.GetBindingSourcePropertyValue(sourceElement, binding.Path);
+                return BindingHelpers.GetBindingSourcePropertyValue(sourceElement, binding.Path);
             else
                 return null;
         }
@@ -301,7 +301,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
                     // and hook to collection change event for the new datacontext value:
                     foreach (var binding in DataContextBindings.Keys)
                         if (DataContextBindings[binding] == casted)
-                            if (BindingHelper.GetBindingSourcePropertyValue(casted.DataContext, binding.Path) is INotifyCollectionChanged collection)
+                            if (BindingHelpers.GetBindingSourcePropertyValue(casted.DataContext, binding.Path) is INotifyCollectionChanged collection)
                                 CollectionChangedEventManager.AddListener(collection, this);
                 }
                 else

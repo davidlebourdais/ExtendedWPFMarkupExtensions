@@ -51,19 +51,13 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// <summary>
         /// Initiates a new instance of <see cref="SingleBindingExtension"/>.
         /// </summary>
-        protected SingleBindingExtension() : base()
-        {
-            ValidationRules = new Collection<ValidationRule>();
-        }
+        protected SingleBindingExtension() : base() => ValidationRules = new Collection<ValidationRule>();
 
         /// <summary>
         /// Initiates a new instance of <see cref="SingleBindingExtension"/>.
         /// </summary>
         /// <param name="path">The property path to be set in the binding.</param>
-        protected SingleBindingExtension(PropertyPath path) : this()
-        {
-            Path = path;
-        }
+        protected SingleBindingExtension(PropertyPath path) : this() => Path = path;
 
         /// <summary>
         /// Provides a values to be used by the framework to set a given target's object target property binding.
@@ -309,7 +303,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
 
             // -- Case where element name is provided, seek source in xaml: --
             else if (!string.IsNullOrWhiteSpace(binding.ElementName) && serviceProvider != null)
-                return BindingHelper.getSourceFromElementName(binding.ElementName, serviceProvider);
+                return BindingHelpers.getSourceFromElementName(binding.ElementName, serviceProvider);
 
             // -- All other case where we have a target to provide: --
             else if (targetObject != null)
@@ -360,9 +354,10 @@ namespace EMA.ExtendedWPFMarkupExtensions
                 // -- Case where relative source is provided: --
                 if (binding.RelativeSource != null)
                 {
-                    var relative = BindingHelper.getSourceFromRelativeSource(binding.RelativeSource, target);
+                    var relative = BindingHelpers.getSourceFromRelativeSource(binding.RelativeSource, target);
                     if (relative == null && targetAsFE != null && !targetAsFE.IsLoaded)
                         UnresolvedSource = (binding, targetAsFE);
+                    else return relative;
                 }
 
                 // -- Case where no source is given at all: --
@@ -395,7 +390,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
 
             // Process source element to retrieve target property:
             if (sourceElement != null)
-                return BindingHelper.GetBindingSourcePropertyValue(sourceElement, binding.Path);
+                return BindingHelpers.GetBindingSourcePropertyValue(sourceElement, binding.Path);
             else
                 return null;
         }
@@ -412,7 +407,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
 
             // Process source element to retrieve target property:
             if (sourceElement != null)
-                return BindingHelper.GetBindingSourcePropertyValue(sourceElement, binding.Path);
+                return BindingHelpers.GetBindingSourcePropertyValue(sourceElement, binding.Path);
             else
                 return null;
         }
@@ -436,7 +431,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         ///  Gets or sets the name of the BindingGroup to which this binding belongs.
         /// </summary>
         [DefaultValue("")]
-        public string BindingGroupName { get; set; }
+        public string BindingGroupName { get; set; } = "";
         /// <summary>
         /// Gets or sets the amount of time, in milliseconds, to wait before updating the binding source after the value on the target changes.
         /// </summary>
@@ -505,7 +500,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// Gets or sets a value that indicates the direction of the data flow in the binding.
         /// </summary>
         [DefaultValue(BindingMode.Default)]
-        public BindingMode Mode { get; set; }
+        public BindingMode Mode { get; set; } = BindingMode.Default;
         /// <summary>
         /// Gets or sets an XPath query that returns the value on the XML binding source to use.
         /// </summary>
@@ -520,7 +515,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// Gets or sets a value that indicates whether to include the NotifyDataErrorValidationRule.
         /// </summary>
         [DefaultValue(true)]
-        public bool ValidatesOnNotifyDataErrors { get; set; }
+        public bool ValidatesOnNotifyDataErrors { get; set; } = true;
         /// <summary>
         /// Gets or sets a value that indicates whether to evaluate the Path relative to the data item or the DataSourceProvider object.
         /// </summary>

@@ -9,7 +9,7 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
     /// <summary>
     /// Provides some common methods for binding processings.
     /// </summary>
-    public static class BindingHelper
+    public static class BindingHelpers
     {
         /// <summary>
         /// Gets a binding source from a name defined in the XAML scope.
@@ -22,8 +22,7 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
             if (!string.IsNullOrWhiteSpace(element_name) && serviceProvider != null)
             {
                 // Try to find element name in current xaml namescope:
-                var xnr = serviceProvider.GetService(typeof(IXamlNameResolver)) as IXamlNameResolver;
-                if (xnr != null)
+                if (serviceProvider.GetService(typeof(IXamlNameResolver)) is IXamlNameResolver xnr)
                     return xnr.Resolve(element_name);
             }
             return null;

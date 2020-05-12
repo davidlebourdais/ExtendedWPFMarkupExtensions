@@ -74,8 +74,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
             if (solvedTarget == null || !(solvedTarget is DependencyObject))
             {
                 // Try to reach root element in xaml namescope to later setup our dynamic resource:
-                var xnr = serviceProvider.GetService(typeof(IRootObjectProvider)) as IRootObjectProvider;
-                if (xnr != null)
+                if (serviceProvider.GetService(typeof(IRootObjectProvider)) is IRootObjectProvider xnr)
                     solvedTarget = xnr.RootObject;
             }
 
