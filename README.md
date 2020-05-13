@@ -14,5 +14,10 @@ When used, offers binding notifications when a source collection is updated. Wor
 
 ActionsToNotify is a combinable NotifyCollectionChangedAction property value (set to all by default) that will be assesses to determined if the collection change can lead to the whole binding notification.
 
+### BoundPathBinding
+A binding for which the Path property can be bound like a dependency property.
 
-Note: does not support PriorityBindings, and bindings in Setters and Triggers.
+Attention when binding to the DataContext property: inherited value is used as default for determining the PathValueBinding if no Source, RelativeSource, or ElementName is explicitely set. Note that inherited DataContext will be the default value as long the path is not resolved. In fact, and this is true for any usage: any other binding properties that you might set will not be used to modify the default value while path is not resolved. 
+
+
+Note: these binding extensions do not support PriorityBindings nor being used in Setters and Triggers.

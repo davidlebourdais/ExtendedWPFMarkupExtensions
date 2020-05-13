@@ -6,7 +6,7 @@
     <PackageDescription>A compilation of extensions to be integrated directly in XAML.</PackageDescription>
     <PackageTags>EMA;WPF;Custom bindings;MarkupExtensions</PackageTags>
     <UseWPF>true</UseWPF>
-    <Version>0.1.3</Version>
+    <Version>0.1.4</Version>
     <Authors>David Le Bourdais</Authors>
 	<Copyright>Copyright © 2020</Copyright>
 	<GenerateDocumentationFile>true</GenerateDocumentationFile>
