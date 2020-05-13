@@ -65,18 +65,12 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
         /// <summary>
         /// Gets the current Value.
         /// </summary>
-        public T Value
-        {
-            get { return (T)GetValue(ValueProperty); }
-        }
+        public T Value => (T)GetValue(ValueProperty);
 
         /// <summary>
         /// Gets the current Value.
         /// </summary>
-        public string PropertyPath
-        {
-            get { return BindingOperations.GetBindingExpression(this, ValueProperty).ResolvedSourcePropertyName; }
-        }
+        public string PropertyPath => BindingOperations.GetBindingExpression(this, ValueProperty).ResolvedSourcePropertyName; 
 
         /// <summary>
         /// Called when the Property is updated
@@ -103,7 +97,7 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
-                ClearValue(ValueProperty);
+                Application.Current.Dispatcher.Invoke(() => ClearValue(ValueProperty));
         }
     }
 }

@@ -207,7 +207,17 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
             {
                 // Try to find element name in current xaml namescope:
                 if (serviceProvider.GetService(typeof(IXamlNameResolver)) is IXamlNameResolver xnr)
-                    return xnr.Resolve(element_name);
+                {
+                    // Try using resolve:
+                    if (xnr.Resolve(element_name) is object result)
+                        return result;
+                    else // try by tracking names:
+                        foreach (var item in xnr.GetAllNamesAndValuesInScope())
+                            if (item.Key == element_name)
+                                return item.Value;
+
+                    return null;
+                }
             }
             return null;
         }
@@ -244,6 +254,30 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
                 throw new NotSupportedException(nameof(RelativeSourceMode.TemplatedParent) + " is currently not supported.");
             }
             return root;
+        }
+        #endregion
+
+        #region Identity bindings
+        /// <summary>
+        /// Builds a binding towards self to maintain a value over a property.
+        /// </summary>
+        /// <param name="targetProperty">Optional dependency property. Identity binding content could be more adapted regarding to passed value.</param>
+        /// <returns>A binding that returns a value mimicking the target property value.</returns>
+        public static Binding GetIdentityBinding(DependencyProperty targetProperty = null)
+        {
+
+            if (targetProperty == FrameworkElement.DataContextProperty)
+                return new Binding()
+                {
+                    Path = new PropertyPath(FrameworkElement.DataContextProperty),
+                    RelativeSource = new RelativeSource(RelativeSourceMode.FindAncestor, typeof(FrameworkElement), 2)
+                };
+            else 
+                return new Binding()
+                {
+                    Path = new PropertyPath(targetProperty.Name),
+                    RelativeSource = new RelativeSource(RelativeSourceMode.Self)
+                };
         }
         #endregion
     }

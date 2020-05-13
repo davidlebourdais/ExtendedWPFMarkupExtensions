@@ -63,11 +63,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
             else if (result is BindingExpression)
             {
                 // Build self binding which will be our "null" value to set:
-                selfPropertyBinding = new Binding()
-                {
-                    Path = new PropertyPath(TargetProperty.Name),
-                    RelativeSource = new RelativeSource(RelativeSourceMode.Self)
-                };
+                selfPropertyBinding = BindingHelpers.GetIdentityBinding(TargetProperty);
 
                 // Try init:
                 Initialize(GetInnerBindingSource(serviceProvider));
