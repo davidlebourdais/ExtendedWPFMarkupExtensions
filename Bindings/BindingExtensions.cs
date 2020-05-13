@@ -1,5 +1,9 @@
-﻿using System.Linq;
+﻿using System;
+using System.Globalization;
+using System.Linq;
+using System.Windows;
 using System.Windows.Data;
+using System.Windows.Markup;
 
 namespace EMA.ExtendedWPFMarkupExtensions.Utils
 {
@@ -59,6 +63,7 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
             return toReturn;
         }
 
+        #region Equivalency extension
         /// <summary>
         /// Determines if a <see cref="Binding"/> object has the same properties
         /// as another one.
@@ -74,12 +79,12 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
             return
                    binding.Source == reference.Source
                 && binding.ElementName == reference.ElementName
-                && binding.RelativeSource == reference.RelativeSource
-                && binding.Path == reference.Path
+                && AreRelativeSourceEquivalent(binding.RelativeSource, reference.RelativeSource)
+                && ArePropertyPathEquivalent(binding.Path, reference.Path)
                 && binding.Mode == reference.Mode
                 && binding.Converter == reference.Converter
                 && binding.ConverterParameter == reference.ConverterParameter
-                && binding.ConverterCulture == reference.ConverterCulture
+                && AreCulutureInfoEquivalent(binding.ConverterCulture, reference.ConverterCulture)
                 && binding.UpdateSourceTrigger == reference.UpdateSourceTrigger
                 && binding.FallbackValue == reference.FallbackValue
                 && binding.TargetNullValue == reference.TargetNullValue
@@ -98,5 +103,55 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
                 && (binding.ValidationRules == null && reference.ValidationRules == null
                     || (binding.ValidationRules != null && reference.ValidationRules != null && !binding.ValidationRules.Except(reference.ValidationRules).Any()));
         }
+
+        /// <summary>
+        /// Determines if two <see cref="RelativeSource"/> are equivalent.
+        /// </summary>
+        /// <param name="relativesource">First object to be compared.</param>
+        /// <param name="reference">Reference object.</param>
+        /// <returns>True is the two objects are the same or have the same property values.</returns>
+        private static bool AreRelativeSourceEquivalent(RelativeSource relativesource, RelativeSource reference)
+            => relativesource == reference || (relativesource != null && reference != null && relativesource.Mode == reference.Mode
+                && (relativesource.Mode != RelativeSourceMode.FindAncestor || (relativesource.AncestorType == reference.AncestorType && relativesource.AncestorLevel == reference.AncestorLevel)));
+
+        /// <summary>
+        /// Determines if two <see cref="PropertyPath"/> are equivalent.
+        /// </summary>
+        /// <param name="propertypath">First object to be compared.</param>
+        /// <param name="reference">Reference object.</param>
+        /// <returns>True is the two objects are the same or have the same property values.</returns>
+        private static bool ArePropertyPathEquivalent(PropertyPath propertypath, PropertyPath reference)
+            => propertypath == reference || (propertypath != null && reference != null && propertypath.Path == reference.Path
+            && (propertypath.PathParameters == reference.PathParameters || !propertypath.PathParameters.Except(reference.PathParameters).Any()));
+
+        /// <summary>
+        /// Determines if two <see cref="CultureInfo"/> are equivalent.
+        /// </summary>
+        /// <param name="cultureinfo">First object to be compared.</param>
+        /// <param name="reference">Reference object.</param>
+        /// <returns>True is the two objects are the same or have the same property values.</returns>
+        private static bool AreCulutureInfoEquivalent(CultureInfo cultureinfo, CultureInfo reference)
+            => cultureinfo == reference || (cultureinfo != null && reference != null && cultureinfo.Equals(reference));
+        #endregion
+
+        #region Value resolver extensions
+        /// <summary>
+        /// Resolves and returns a binding result on a given target object.
+        /// </summary>
+        ///  <param name="binding">The binding to be evaluated.</param>
+        /// <param name="target">The object on which the binding must be used.</param>
+        /// <returns>The result of the binding operation on the target.</returns>
+        public static object ResolveValue(this Binding binding, DependencyObject target)
+            => BindingHelpers.ResolveBindingValue(binding, target);
+
+        /// <summary>
+        /// Resolves and returns a binding result on a given target object.
+        /// </summary>
+        ///  <param name="binding">The binding to be evaluated.</param>
+        /// <param name="serviceProvider">Service provider provided by the framework.</param>
+        /// <returns>The result of the binding operation on the target.</returns>
+        public static object ResolveValue(this Binding binding, IServiceProvider serviceProvider)
+            => BindingHelpers.ResolveBindingValue(binding, serviceProvider);
+        #endregion
     }
 }

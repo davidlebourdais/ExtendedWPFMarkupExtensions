@@ -121,9 +121,6 @@ namespace EMA.ExtendedWPFMarkupExtensions
                 // Add binding proxy in the object resources:
                 if (!casted.Resources.Contains(ProxyBinder))
                     casted.Resources[ProxyBinder] = ProxyBinder;
-
-                // Unset unresolved as now processed:
-                UnresolvedSource = (null, null);
             }
         }
     }

@@ -12,4 +12,7 @@ Set binding only if the source object matches a specific predefined type value.
 ### ICollectionChangedBinding
 When used, offers binding notifications when a source collection is updated. Works as single Binding and MultiBinding. In the latter case, any update of a bound source Binding item will trigger the udpate.
 
-ActionsToNotify is a combinable NotifyCollectionChangedAction  property value (set to all by default) that will be assesses to determined if the collection change can lead to the whole binding notification.
+ActionsToNotify is a combinable NotifyCollectionChangedAction property value (set to all by default) that will be assesses to determined if the collection change can lead to the whole binding notification.
+
+
+Note: does not support PriorityBindings, and bindings in Setters and Triggers.

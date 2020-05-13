@@ -3,6 +3,7 @@ using System.Windows.Markup;
 using System.Windows.Data;
 using System.Windows;
 using System.Reflection;
+using EMA.ExtendedWPFMarkupExtensions.Utils;
 
 namespace EMA.ExtendedWPFMarkupExtensions
 {
@@ -15,7 +16,10 @@ namespace EMA.ExtendedWPFMarkupExtensions
     [MarkupExtensionReturnType(typeof(Binding))]
     public class TypeFilteredBindingExtension : SingleBindingExtension
     {
-        private bool initialized;   // indicates if an instance of this class has been initialized.
+        private bool initialized;            // indicates if initialization is over.
+        private bool init_to_empty = true;   // indicates if, after very first initialization, returned provided value shall be empty or plain binding.
+        private Binding innerBinding;        // Keeps a hard copy of the base inner binding;
+        private Binding selfPropertyBinding; // an identity binding (binding that returns target object's target property's value to self).
 
         /// <summary>
         /// Gets or sets the type of the binding source which will
@@ -52,62 +56,79 @@ namespace EMA.ExtendedWPFMarkupExtensions
         {
             var result = base.ProvideValue(serviceProvider);
 
-            if (result is BindingExpression) // process only if a binding was issued.
-                initialize(getBindingSource(GeneratedBinding, serviceProvider));
+            // 'Normal' binding is no filter source type is provided:
+            if (SourceType == null)
+                initialized = true;
+            // else process only if a binding was issued and source type is not set:
+            else if (result is BindingExpression)
+            {
+                // Build self binding which will be our "null" value to set:
+                selfPropertyBinding = new Binding()
+                {
+                    Path = new PropertyPath(TargetProperty.Name),
+                    RelativeSource = new RelativeSource(RelativeSourceMode.Self)
+                };
 
-            return result;
+                // Try init:
+                Initialize(GetInnerBindingSource(serviceProvider));
+                if (!initialized || init_to_empty)
+                {
+                    innerBinding = InnerBinding;  // keep a copy for later usage.
+                    return selfPropertyBinding.ProvideValue(serviceProvider);  // return empty binding we do not know source type or if inited as it.
+                }
+            }
+
+            return result;  // return if full binding is required, or SharedDp or whatever was issued.
         }
 
         /// <summary>
         /// Called when the target object is initialized.
         /// </summary>
         /// <param name="target">The binding target object.</param>
-        protected override void OnTargetInitialized(FrameworkElement target)
-        {
-            if (target == null) return;
-
-            // Retry class initialization at framework element init:
-            if (!initialized)
-                initialize(getBindingSource(GeneratedBinding, TargetObject));
-        }
+        protected override void OnTargetInitialized(FrameworkElement target) => Initialize(); // retry class initialization at framework element init.
 
         /// <summary>
         /// Called when the target object is loaded.
         /// </summary>
         /// <param name="target">The binding target object.</param>
-        protected override void OnTargetLoaded(FrameworkElement target)
-        {
-            if (target == null) return;
+        protected override void OnTargetLoaded(FrameworkElement target) => Initialize(); // retry class initialization at loaded.
 
-            // Retry initialization at loaded:
-            if (!initialized && GeneratedBinding != null)
-                initialize(getBindingSource(GeneratedBinding, TargetObject), true);
+        /// <summary>
+        /// Prepares this class to filter data based on resolved (or unresolved source).
+        /// </summary>
+        private void Initialize()
+        {
+            if (initialized) return;
+
+            // Find source value here if not provided:
+            var source = BindingHelpers.GetBindingSource(innerBinding, TargetObject, out bool resolved, out bool _);
+            if (resolved)
+                Initialize(source);
         }
 
         /// <summary>
         /// Prepares this class to filter data based on resolved (or unresolved source).
         /// </summary>
-        /// <param name="source">The source object to assess.</param>
-        /// <param name="loading">Indicates if the functin is called in the loading context of the target.</param>
-        private void initialize(object source, bool loading = false)
+        /// <param name="source">A source object to assess.</param>
+        private void Initialize(object source)
         {
             if (initialized) return;
 
             // If source is resolved then set binding up:
             if (source != null)
             {
-                toggleBinding(source);
+                ToggleBinding(source);
                 initialized = true;
 
                 // Check if source is a datacontext, in which case subscribe to datacontext changed event:
-                if (DatacontextTarget.Item1 != null)
-                    DatacontextTarget.Item2.DataContextChanged += DatacontextTarget_DataContextChanged;
+                if (IsInnerSourceDatacontext && TargetObject != null)
+                    (TargetObject as FrameworkElement).DataContextChanged += DatacontextTarget_DataContextChanged;
             }
             // else clear current binding since we cannot know if source type is correct:
             else if (TargetObject != null)  // but only if target object is identified.
             {
-                // Clear current binding while source isn't resolved, since it could be of another
-                // type as the accepted one:
+                // Try to clear current binding while source isn't resolved, since it could be of another
+                // type as the accepted one and to free the identity binding processing:
                 if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) != null)
                     BindingOperations.ClearBinding(TargetObject, TargetProperty);
             }
@@ -118,10 +139,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// </summary>
         /// <param name="target">The binding target object.</param>
         protected override void OnTargetUnloaded(FrameworkElement target)
-        {
-            // Free up event handlers:
-            target.DataContextChanged -= DatacontextTarget_DataContextChanged;
-        }
+            => target.DataContextChanged -= DatacontextTarget_DataContextChanged;  // free up event handlers.
 
         /// <summary>
         /// Called whenever the datacontext of one of the inner source binding changed.
@@ -131,7 +149,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         private void DatacontextTarget_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (TargetObject == sender && TargetProperty != null)
-                toggleBinding(getBindingSource(GeneratedBinding, TargetObject));
+                ToggleBinding(BindingHelpers.GetBindingSource(innerBinding, TargetObject, out bool _, out bool _));
             else if (sender is FrameworkElement casted)
                 casted.DataContextChanged -= DatacontextTarget_DataContextChanged;
         }
@@ -140,22 +158,26 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// Sets or unsets the inner binding regarding to the passed source element value.
         /// </summary>
         /// <param name="sourceElement">The binding source element that must be assessed.</param>
-        private void toggleBinding(object sourceElement)
+        private void ToggleBinding(object sourceElement)
         {
             if (TargetObject != null && TargetProperty != null && SourceType != null)
             {
                 // If has binding while should not have, clear binding:
-                if (BindingOperations.GetBindingBase(TargetObject, TargetProperty) != null && (sourceElement == null
-                    || SourceType == null || sourceElement?.GetType() != SourceType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(SourceType)))
+                var currentBinding = BindingOperations.GetBindingBase(TargetObject, TargetProperty);
+                if (currentBinding != null && (sourceElement == null || SourceType == null 
+                    || sourceElement?.GetType() != SourceType && !sourceElement.GetType().GetTypeInfo().IsSubclassOf(SourceType)))
                 {
                     BindingOperations.ClearBinding(TargetObject, TargetProperty);
+                    if (BindingOperations.IsDataBound(TargetObject, TargetProperty))  // clearing may fail happen when called from datatemplate
+                        BindingOperations.SetBinding(TargetObject, TargetProperty, selfPropertyBinding);  // set set "null" value.
+                    init_to_empty = true;
                 }
                 // If has no binding while should have, set binding:
-                else if (sourceElement != null 
-                        && BindingOperations.GetBindingBase(TargetObject, TargetProperty) == null 
-                        && (sourceElement?.GetType() == SourceType || sourceElement.GetType().GetTypeInfo().IsSubclassOf(SourceType)))
+                else if (sourceElement != null && (currentBinding == null || ((currentBinding as Binding)?.IsEquivalentTo(selfPropertyBinding) == true))
+                        && (sourceElement.GetType() == SourceType || sourceElement.GetType().GetTypeInfo().IsSubclassOf(SourceType)))
                 {
-                    BindingOperations.SetBinding(TargetObject, TargetProperty, GeneratedBinding);
+                    BindingOperations.SetBinding(TargetObject, TargetProperty, innerBinding);
+                    init_to_empty = false;
                 }
             }
         }

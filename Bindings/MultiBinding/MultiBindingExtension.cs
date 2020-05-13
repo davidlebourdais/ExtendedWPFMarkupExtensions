@@ -55,11 +55,11 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// <returns>A <see cref="MultiBindingExpression"/> for the targeted object and property.</returns>
         public override object ProvideValue(IServiceProvider serviceProvider)
         {
-            var pvt = serviceProvider.GetService(typeof(IProvideValueTarget)) as IProvideValueTarget;
-            if (pvt == null) return new MultiBinding().ProvideValue(serviceProvider);
+            if (!(serviceProvider.GetService(typeof(IProvideValueTarget)) is IProvideValueTarget pvt)) 
+                return new MultiBinding().ProvideValue(serviceProvider);
 
-            var targetObject = pvt.TargetObject as DependencyObject;
-            if (targetObject == null) return new MultiBinding().ProvideValue(serviceProvider);
+            if (!(pvt.TargetObject is DependencyObject targetObject))
+                return new MultiBinding().ProvideValue(serviceProvider);
 
             // Template usage case, see https://stackoverflow.com/questions/26877676/how-do-i-get-a-bindingexpression-from-a-binding-object.
             if (pvt?.TargetObject?.GetType().Name == "SharedDp")
@@ -76,8 +76,8 @@ namespace EMA.ExtendedWPFMarkupExtensions
             else if (pvt?.TargetObject is Condition)  // same for datatrigger conditions
                 throw new NotSupportedException(nameof(MultiBindingExtension) + " cannot be used with a " + nameof(Condition) + ".");
 
-            var targetProperty = pvt.TargetProperty as DependencyProperty;
-            if (targetProperty == null) return new MultiBinding().ProvideValue(serviceProvider);
+            if (!(pvt.TargetProperty is DependencyProperty targetProperty)) 
+                return new MultiBinding().ProvideValue(serviceProvider);
 
             // Create multibinding:
             var multibinding = createMultiBinding(serviceProvider);
@@ -122,21 +122,21 @@ namespace EMA.ExtendedWPFMarkupExtensions
         protected MultiBinding createMultiBinding(IServiceProvider serviceProvider)
         {
             // Retrieve object over which the extension is applied
-            var pvt = serviceProvider.GetService(typeof(IProvideValueTarget)) as IProvideValueTarget;
-            if (pvt == null) return EmptyMultiBinding;
+            if (!(serviceProvider.GetService(typeof(IProvideValueTarget)) is IProvideValueTarget pvt))
+                return EmptyMultiBinding;
 
-            var targetObject = pvt.TargetObject as DependencyObject;
-            if (targetObject == null) return EmptyMultiBinding;
+            if (!(pvt.TargetObject is DependencyObject targetObject))
+                return EmptyMultiBinding;
 
-            var targetProperty = pvt.TargetProperty as DependencyProperty;
-            if (targetProperty == null) return EmptyMultiBinding;
+            if (!(pvt.TargetProperty is DependencyProperty targetProperty)) 
+                return EmptyMultiBinding;
 
             var modeToSet = this.Mode;
             // Correct mode if not compatible:
             if (modeToSet == BindingMode.TwoWay)
             {
-                var frameworktargetproperty = targetProperty.GetMetadata(targetObject.GetType()) as FrameworkPropertyMetadata;
-                if (frameworktargetproperty != null && !frameworktargetproperty.BindsTwoWayByDefault)
+                if (targetProperty.GetMetadata(targetObject.GetType()) is FrameworkPropertyMetadata frameworktargetproperty 
+                    && !frameworktargetproperty.BindsTwoWayByDefault)
                     modeToSet = BindingMode.OneWay;
 
                 // Change also if dp is clearly set as readonly:
@@ -145,24 +145,26 @@ namespace EMA.ExtendedWPFMarkupExtensions
             }
 
             // Create binding:
-            var multibinding = new MultiBinding();
-            multibinding.FallbackValue = this.FallbackValue;
-            multibinding.StringFormat = this.StringFormat;
-            multibinding.TargetNullValue = this.TargetNullValue;
-            multibinding.BindingGroupName = this.BindingGroupName;
-            multibinding.Delay = this.Delay;
-            multibinding.ValidatesOnExceptions = this.ValidatesOnExceptions;
-            multibinding.UpdateSourceExceptionFilter = this.UpdateSourceExceptionFilter;
-            multibinding.ConverterCulture = this.ConverterCulture;
-            multibinding.ConverterParameter = this.ConverterParameter;
-            multibinding.Converter = this.Converter;
-            multibinding.ValidatesOnDataErrors = this.ValidatesOnDataErrors;
-            multibinding.NotifyOnValidationError = this.NotifyOnValidationError;
-            multibinding.NotifyOnSourceUpdated = this.NotifyOnSourceUpdated;
-            multibinding.UpdateSourceTrigger = this.UpdateSourceTrigger;
-            multibinding.Mode = modeToSet;
-            multibinding.NotifyOnTargetUpdated = this.NotifyOnTargetUpdated;
-            multibinding.ValidatesOnNotifyDataErrors = this.ValidatesOnNotifyDataErrors;
+            var multibinding = new MultiBinding
+            {
+                FallbackValue = this.FallbackValue,
+                StringFormat = this.StringFormat,
+                TargetNullValue = this.TargetNullValue,
+                BindingGroupName = this.BindingGroupName,
+                Delay = this.Delay,
+                ValidatesOnExceptions = this.ValidatesOnExceptions,
+                UpdateSourceExceptionFilter = this.UpdateSourceExceptionFilter,
+                ConverterCulture = this.ConverterCulture,
+                ConverterParameter = this.ConverterParameter,
+                Converter = this.Converter,
+                ValidatesOnDataErrors = this.ValidatesOnDataErrors,
+                NotifyOnValidationError = this.NotifyOnValidationError,
+                NotifyOnSourceUpdated = this.NotifyOnSourceUpdated,
+                UpdateSourceTrigger = this.UpdateSourceTrigger,
+                Mode = modeToSet,
+                NotifyOnTargetUpdated = this.NotifyOnTargetUpdated,
+                ValidatesOnNotifyDataErrors = this.ValidatesOnNotifyDataErrors
+            };
 
             if (multibinding.ValidationRules != null)
                 foreach (var rule in this.ValidationRules)
@@ -217,7 +219,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         ///  Gets or sets the name of the BindingGroup to which this binding belongs.
         /// </summary>
         [DefaultValue("")]
-        public string BindingGroupName { get; set; }
+        public string BindingGroupName { get; set; } = "";
         /// <summary>
         /// Gets or sets the amount of time, in milliseconds, to wait before updating the binding source after the value on the target changes.
         /// </summary>
@@ -274,12 +276,12 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// Gets or sets a value that determines the timing of binding source updates.
         /// </summary>
         [DefaultValue(UpdateSourceTrigger.PropertyChanged)]
-        public UpdateSourceTrigger UpdateSourceTrigger { get; set; }
+        public UpdateSourceTrigger UpdateSourceTrigger { get; set; } = UpdateSourceTrigger.PropertyChanged;
         /// <summary>
         /// Gets or sets a value that indicates the direction of the data flow of this binding.
         /// </summary>
         [DefaultValue(BindingMode.Default)]
-        public BindingMode Mode { get; set; }
+        public BindingMode Mode { get; set; } = BindingMode.Default;
         /// <summary>
         /// Gets the collection of Binding objects within this MultiBinding instance.
         /// </summary>
@@ -294,7 +296,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// Gets or sets a value that indicates whether to include the NotifyDataErrorValidationRule.
         /// </summary>
         [DefaultValue(true)]
-        public bool ValidatesOnNotifyDataErrors { get; set; }
+        public bool ValidatesOnNotifyDataErrors { get; set; } = true;
         #endregion
     }
 }

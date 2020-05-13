@@ -4,7 +4,6 @@ using System.Windows.Data;
 using System.Windows;
 using System.ComponentModel;
 using System.Collections.Specialized;
-using EMA.ExtendedWPFMarkupExtensions.Utils;
 
 namespace EMA.ExtendedWPFMarkupExtensions
 {
@@ -16,6 +15,8 @@ namespace EMA.ExtendedWPFMarkupExtensions
     [MarkupExtensionReturnType(typeof(BindingExpression))]
     public class ICollectionChangedBindingExtension : SingleBindingExtension, IWeakEventListener
     {
+        private bool initialized; // indicates if source was resolved and processing is ready.
+
         /// <summary>
         /// Gets or set the <see cref="NotifyCollectionChangedAction"/> the binding should 
         /// be alerted on. Multiple actions are possible (ex: Add|Remove). Default is set to all possible actions.
@@ -56,53 +57,48 @@ namespace EMA.ExtendedWPFMarkupExtensions
         {
             var result = base.ProvideValue(serviceProvider);
 
-            if (TargetObject != null && TargetProperty != null && result is BindingExpression bindingexpression)
-            {
-                var binding = bindingexpression.ParentBinding;
-                if (getBindingSourcePropertyValue(binding, serviceProvider) is INotifyCollectionChanged collection)
-                    CollectionChangedEventManager.AddListener(collection, this);  // add this as listener to update collection when it changes
-
-                // Check if binding was not resolved, in which case postpone processing when target element is loaded:
-                if (UnresolvedSource.Item1 != null && !UnresolvedSource.Item2.IsLoaded)
-                    UnresolvedSource.Item2.Loaded += UnresolvedSource_Loaded;
-
-                // Check if source is a datacontext, in which case subscribe to datacontext changed event:
-                if (DatacontextTarget.Item1 != null)
-                    DatacontextTarget.Item2.DataContextChanged += DatacontextTarget_DataContextChanged;
-            }
+            // Try to init if providing a binding:
+            if (result is BindingExpression)
+                Initialize(GetInnerBindingSource(serviceProvider));
 
             return result;
         }
 
         /// <summary>
-        /// Occurs when the target object is loaded and thus visual tree is constructed. 
-        /// Try to find binding source if not resolved at construction.
+        /// Prepares this class to listen to source collection is any.
         /// </summary>
-        /// <param name="sender">The framework element that was loaded.</param>
-        /// <param name="e">Information about the event.</param>
-        private void UnresolvedSource_Loaded(object sender, RoutedEventArgs e)
+        private void Initialize()
         {
-            if (sender is FrameworkElement casted)
+            if (initialized || InnerBinding == null) return;
+
+            // Find source value here if not provided:
+            Initialize(GetInnerBindingSource());
+        }
+
+        /// <summary>
+        /// Called when the target object is loaded.
+        /// </summary>
+        /// <param name="target">The binding target object.</param>
+        protected override void OnTargetLoaded(FrameworkElement target) => Initialize(); // retry class initialization at loaded.
+
+        /// <summary>
+        /// Prepares this class to listen to source collection is any.
+        /// </summary>
+        /// <param name="source">A source object to assess.</param>
+        private void Initialize(object source)
+        {
+            // If source is resolved then set binding up:
+            if (!initialized && source != null)
             {
-                casted.Loaded -= UnresolvedSource_Loaded;  // unsubscribe.
+                // Get source (should be ok now that visual tree is constructed):
+                if (ResolveInnerBindingValue() is INotifyCollectionChanged collection)
+                    CollectionChangedEventManager.AddListener(collection, this);  // add this as listener to update collection when it changes
 
-                if (TargetObject != null && TargetProperty != null)
-                {
-                    var binding = BindingOperations.GetBinding(TargetObject, TargetProperty);
-                    if (binding != null && UnresolvedSource.Item2 == casted)  // should be unresolved.
-                    {
-                        // Get source (should be ok now that visual tree is constructed):
-                        if (getBindingSourcePropertyValue(binding, casted) is INotifyCollectionChanged collection)
-                            CollectionChangedEventManager.AddListener(collection, this);  // add this as listener to update collection when it changes
-                    }
+                // Check if source is a datacontext, in which case subscribe to datacontext changed event:
+                if (IsInnerSourceDatacontext)
+                    (TargetObject as FrameworkElement).DataContextChanged += DatacontextTarget_DataContextChanged;
 
-                    // Check if source is a datacontext, in which case subscribe to datacontext changed event:
-                    if (DatacontextTarget.Item1 != null)
-                        DatacontextTarget.Item2.DataContextChanged += DatacontextTarget_DataContextChanged;
-
-                    // Unset unresolved as now processed:
-                    UnresolvedSource = (null, null);
-                }
+                initialized = true;
             }
         }
 
@@ -111,10 +107,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
         /// </summary>
         /// <param name="target">The binding target object.</param>
         protected override void OnTargetUnloaded(FrameworkElement target)
-        {
-            // Free up event handlers:
-            target.DataContextChanged -= DatacontextTarget_DataContextChanged;
-        }
+            => target.DataContextChanged -= DatacontextTarget_DataContextChanged;  // free up event handlers.
 
         /// <summary>
         /// Called whenever the datacontext of one of the inner source binding changed.
@@ -124,19 +117,15 @@ namespace EMA.ExtendedWPFMarkupExtensions
         private void DatacontextTarget_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
             if (sender is FrameworkElement casted)
-            {
-                if (TargetObject != null && TargetProperty != null)
+                if (sender == TargetObject)
                 {
-                    var binding = BindingOperations.GetBinding(TargetObject, TargetProperty);
-                    if (binding != null)
-                        if (BindingHelpers.GetBindingSourcePropertyValue(casted.DataContext, binding.Path) is INotifyCollectionChanged collection)
-                            CollectionChangedEventManager.AddListener(collection, this);
+                    if (ResolveInnerBindingValue() is INotifyCollectionChanged collection)
+                        CollectionChangedEventManager.AddListener(collection, this);
                 }
                 else
                 {
                     casted.DataContextChanged -= DatacontextTarget_DataContextChanged;
                 }
-            }
         }
 
         /// <summary>
