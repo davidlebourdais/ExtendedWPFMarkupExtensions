@@ -172,7 +172,7 @@ namespace EMA.ExtendedWPFMarkupExtensions
                 else if (sourceElement != null && (currentBinding == null || ((currentBinding as Binding)?.IsEquivalentTo(selfPropertyBinding) == true))
                         && (sourceElement.GetType() == SourceType || sourceElement.GetType().GetTypeInfo().IsSubclassOf(SourceType)))
                 {
-                    BindingOperations.SetBinding(TargetObject, TargetProperty, innerBinding);
+                    BindingOperations.SetBinding(TargetObject, TargetProperty, innerBinding ?? InnerBinding);
                     init_to_empty = false;
                 }
             }
