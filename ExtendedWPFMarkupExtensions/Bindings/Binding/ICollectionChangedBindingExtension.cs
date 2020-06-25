@@ -10,12 +10,13 @@ namespace EMA.ExtendedWPFMarkupExtensions
     /// <summary>
     /// Markup extension for binding of <see cref="INotifyCollectionChanged"/> objects. 
     /// Will fire <see cref="INotifyPropertyChanged"/> when the collection updates, allowing to 
-    /// use trigger <see cref="IValueConverter"/> for instance.
+    /// trigger a things like an <see cref="IValueConverter"/>.
     /// </summary>
     [MarkupExtensionReturnType(typeof(BindingExpression))]
     public class ICollectionChangedBindingExtension : SingleBindingExtension, IWeakEventListener
     {
-        private bool initialized; // indicates if source was resolved and processing is ready.
+        private bool initialized;           // indicates if source was resolved and processing is ready.
+        private Action updateTargetAction;  // stores action to be called for target update.
 
         /// <summary>
         /// Gets or set the <see cref="NotifyCollectionChangedAction"/> the binding should 
@@ -90,6 +91,11 @@ namespace EMA.ExtendedWPFMarkupExtensions
             // If source is resolved then set binding up:
             if (!initialized && source != null)
             {
+                // Prepare an expression updater:
+                var expression = BindingOperations.GetBindingExpression(TargetObject, TargetProperty);
+                if (expression != null)
+                    updateTargetAction = () => expression?.UpdateTarget();
+
                 // Get source (should be ok now that visual tree is constructed):
                 if (ResolveInnerBindingValue() is INotifyCollectionChanged collection)
                     CollectionChangedEventManager.AddListener(collection, this);  // add this as listener to update collection when it changes
@@ -146,22 +152,20 @@ namespace EMA.ExtendedWPFMarkupExtensions
                     if (e is NotifyCollectionChangedEventArgs collectionargs && ActionsToNotify.HasFlag(collectionargs.Action))
                     {
                         // Update binding target when collection changed:
-                        var expression = BindingOperations.GetBindingExpression(TargetObject, TargetProperty);
-                        if (expression != null)
+                        if (updateTargetAction != null)
                         {
-                            expression.UpdateTarget();
-                            return true;
+                            if (Application.Current.Dispatcher.CheckAccess())
+                                updateTargetAction.Invoke();
+                            else Application.Current.Dispatcher.BeginInvoke(updateTargetAction);
                         }
-                        else return false;
                     }
-                    else return false;
                 }
             }
             else if (sender is INotifyCollectionChanged collection)
             {
                 CollectionChangedEventManager.RemoveListener(collection, this);  // our binding expression is not used anymore, we can shut listening down.
             }
-            return false;
+            return true;  // always return true otherwise ugly exception happen in the framework core.
         }
     }
 }
