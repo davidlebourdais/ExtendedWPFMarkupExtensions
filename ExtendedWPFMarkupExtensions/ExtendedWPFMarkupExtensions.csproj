@@ -4,7 +4,7 @@
     <PackageId>ExtendedWPFMarkupExtensions</PackageId>
     <Title>Extended WPF extensions to be used in XAML code</Title>
     <PackageDescription>A compilation of extensions to be integrated directly in XAML.</PackageDescription>
-    <PackageTags>EMA;WPF;Custom bindings;MarkupExtensions</PackageTags>
+    <PackageTags>WPF;Custom bindings;MarkupExtensions</PackageTags>
     <UseWPF>true</UseWPF>
     <Version>0.1.6</Version>
     <Authors>David Le Bourdais</Authors>
@@ -14,6 +14,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="ExtendedWPFVisualTreeHelper" Version="1.0.5" />
+    <PackageReference Include="ExtendedWPFVisualTreeHelper" Version="2.0.0" />
   </ItemGroup>
 </Project>

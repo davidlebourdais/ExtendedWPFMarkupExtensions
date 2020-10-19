@@ -235,7 +235,7 @@ namespace EMA.ExtendedWPFMarkupExtensions.Utils
             if (relativeSource.Mode == RelativeSourceMode.FindAncestor)
             {
                 if (relativeSource.AncestorType != null)
-                    return WPFVisualFinders.FindParentByTypeExtended(root, relativeSource.AncestorType);
+                    return root.FindParentByType(relativeSource.AncestorType);
                 else if (relativeSource.AncestorLevel > 0)
                     return WPFVisualFinders.FindParentByLevel(root, relativeSource.AncestorLevel);
             }
